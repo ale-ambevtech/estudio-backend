@@ -1,0 +1,156 @@
+[tool.poetry]
+name = "estudio-backend"
+version = "0.1.0"
+description = ""
+authors = ["alexandremendoncaalvaro <alexandre.alvaro@ambevtech.com.br>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = { extras = ["standard"], version = "^0.115.4" }
+tomli = "^2.0.1"
+aiofiles = "^24.1.0"
+opencv-contrib-python-headless = "^4.10.0.84"
+
+[tool.poetry.group.dev.dependencies]
+taskipy = "^1.14.0"
+black = "^24.10.0"
+isort = "^5.13.2"
+pyclean = "^3.0.0"
+prospector = "^1.12.1"
+pip-audit = "^2.7.3"
+pytest-cov = "^5.0.0"
+ruff = "^0.3.0"
+
+[tool.taskipy.tasks]
+dev = { cmd = """
+    fastapi dev app/main.py
+    """, help = "Executa o projeto no modo de desenvolvimento" }
+
+run = { cmd = """
+    fastapi run --workers ${@:-4} app/main.py
+    """, help = "Executa o projeto no modo de produção. Uso: 'task run [número de workers]'" }
+
+check = { cmd = """
+    task sec &&
+    task lint
+    """, help = "Aplica o linter e conduz uma verificação completa do projeto" }
+
+lint = { cmd = """
+    echo "### Black ##############################################"
+    black . &&
+    echo "### Isort ##############################################"
+    isort . &&
+    echo "### Prospector #########################################"
+    prospector --no-autodetect
+    """, help = "Aplica o linter no código" }
+
+req = { cmd = """
+    echo "### Requirements #######################################"
+    poetry run pip freeze > requirements.txt
+    echo "requirements.txt exported"
+    """, help = "Exporta o arquivo 'requirements.txt'" }
+
+sec = { cmd = """
+    echo "### Pip Audit ##########################################"
+    pip-audit
+    """, help = "Realiza uma auditoria de segurança nas dependências do pip" }
+
+test = { cmd = """
+    echo "### Pytest #############################################"
+    pytest -s -x
+    """, help = "Executa todos os testes unitários" }
+
+cov = { cmd = """
+    task report
+    """, help = "Executa os testes e abre a pasta do relatório HTML de cobertura de testes" }
+
+report = { cmd = """
+    echo "### Test Coverage Report ###############################"
+    echo "Open index.html in htmlcov folder to view coverage report"
+    cd $(pwd)/htmlcov
+    && if [[ "$OSTYPE" == "msys" ]]; then \
+        explorer.exe .
+    fi
+    """, help = "Abre a pasta do relatório HTML de cobertura de testes" }
+
+sonar = { cmd = """
+    pytest -s -x  && coverage xml -o coverage.xml \
+    && if [[ "$OSTYPE" == "msys" ]]; then \
+        powershell -Command "$filePath = 'coverage.xml'; (Get-Content $filePath) | Where-Object { $_ -notmatch '<sources>' -and $_ -notmatch '</sources>' -and $_ -notmatch '<source>' } | Set-Content $filePath" \
+        && sonar-scanner.bat -Dproject.settings=sonar-project.properties; \
+    else \
+        sonar-scanner \
+        -Dproject.settings=sonar-project.properties; \
+    fi
+    """, help = "Executa o Sonar Scanner" }
+
+clean = { cmd = """
+    echo "### Clean ###############################################" &&
+    pyclean . &&
+    echo "Cleaning Python cache..." &&
+    if [[ "$OSTYPE" == "msys" ]]; then
+        powershell -Command "Get-ChildItem -Path . -Include __pycache__, .pytest_cache, .coverage, htmlcov, .mypy_cache, debug, uploads -Recurse -Force | Remove-Item -Recurse -Force" &&
+        powershell -Command "Get-ChildItem -Path . -Include .coverage, coverage.xml, .DS_Store -Recurse -Force | Remove-Item -Force"
+    else
+        find . -type d -name "__pycache__" -exec rm -rf {} + &&
+        find . -type d -name ".pytest_cache" -exec rm -rf {} + &&
+        find . -type d -name ".coverage" -exec rm -rf {} + &&
+        find . -type d -name "htmlcov" -exec rm -rf {} + &&
+        find . -type d -name ".mypy_cache" -exec rm -rf {} + &&
+        find . -type d -name "debug" -exec rm -rf {} + &&
+        find . -type d -name "uploads" -exec rm -rf {} + &&
+        find . -type f -name ".coverage" -delete &&
+        find . -type f -name "coverage.xml" -delete &&
+        find . -type f -name ".DS_Store" -delete
+    fi &&
+    echo "All temporary files and directories have been cleaned!"
+    """, help = "Limpa todos os arquivos temporários e caches do projeto" }
+
+lint_check = { cmd = """
+    echo "### Black ##############################################"
+    black --check --diff . &&
+    echo "### Isort ##############################################"
+    isort --check --diff . &&
+    echo "### Prospector #########################################"
+    prospector --no-autodetect
+    """, help = "Imprime no terminal relatório de linting, sem aplicar modificações" }
+
+pre_cov = { cmd = """
+    task test
+    """, help = "Executa automaticamente os testes antes do comando 'task cov'" }
+
+post_check = { cmd = """
+    task req &&
+    task test &&
+    echo "Run the command 'task report' to open html coverage report folder"
+    echo ""
+    """, help = "Executa automaticamente após o comando 'task check'" }
+
+comments = { cmd = """
+    find ./app -type f -name "*.py" ! -path "*/tests/*" -exec sed -i '' '/^[[:space:]]*#/d' {} + &&
+    find ./app -type f -name "*.py" ! -path "*/tests/*" -exec sed -i '' 's/[^"'"'"']*#.*$//' {} +
+    """, help = "Remove comments while preserving docstrings" }
+
+find-comments = { cmd = """
+    grep -r "#" ./app/ --include="*.py" --exclude="__init__.py"
+    """, help = "Find remaining comments in Python files" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "--cov=app --cov-report=html --cov-report=term --doctest-modules"
+testpaths = ["app/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = ["asyncio: mark test as async/await test"]
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff.lint]
+select = ["COM"]
