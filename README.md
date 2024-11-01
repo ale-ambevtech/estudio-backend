@@ -13,11 +13,7 @@ O Estúdio é um módulo da plataforma Soda Vision, que oferece duas principais 
 - Teste e validação usando vídeos
 - Exportação para execução em dispositivos de borda
 
-<<<<<<< HEAD
-### 2. Modelos Personalizados
-=======
 ### 2. Modelos Personalizados (Soda Vision)
->>>>>>> ad484b4 (doc: Update Readme)
 
 - Treinamento de modelos de classificação customizados
 - Interface intuitiva para upload e organização de datasets
@@ -37,11 +33,7 @@ A **Engine** é o núcleo compartilhado entre o Estúdio e o Runner, responsáve
 
 ### Estúdio
 
-<<<<<<< HEAD
-O **Estúdio** é a interface web onde os usuários podem desenvolver e testar seus projetos. Características principais:
-=======
 O **Estúdio** é a interface web onde os usuários podem desenvolver e testar seus projetos focados em PDI. Características principais:
->>>>>>> ad484b4 (doc: Update Readme)
 
 - **Upload de Vídeo**: O usuário faz upload de um vídeo para teste, que é armazenado localmente no frontend e replicado no backend.
 - **Interface Visual**: Permite marcar áreas de interesse (ROIs) no vídeo através de retângulos.
@@ -53,13 +45,10 @@ O **Estúdio** é a interface web onde os usuários podem desenvolver e testar s
   - _(Novas funções serão adicionadas futuramente)_
 - **Exportação**: Permite exportar as regras de inferência para serem executadas no Runner.
 
-<<<<<<< HEAD
-=======
 ### Estúdio de Papelão
 
 Apesar de ser desenhado para integrar no frontend do Soda Vision, o Estúdio Backend está em fase de testes e utiliza como frontend uma aplicação em outro repositório chamada **Estúdio de Papelão**. Trata-se de um frontend simplificado para testes, experimentações e validações do Estúdio como um todo.
 
->>>>>>> ad484b4 (doc: Update Readme)
 ### Runner
 
 O **Runner** é o componente que executa em dispositivos de borda, aplicando as regras de inferência criadas no Estúdio em streams de vídeo em tempo real. Características:
