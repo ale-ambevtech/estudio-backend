@@ -60,6 +60,8 @@ O **Runner** é o componente que executa em dispositivos de borda, aplicando as 
 
 ## FrameMirror e MetaSync
 
+![FrameMirror](./readme/FrameMirror.png)
+
 ### FrameMirror
 
 O **FrameMirror** é o componente que permite a sincronização entre o estado do vídeo no frontend e no backend do Estúdio. Em vez de trafegar imagens, o frontend envia apenas um JSON contendo:
