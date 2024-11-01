@@ -1,6 +1,7 @@
 from enum import Enum
+from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .geometry import ROI, RGBColor
 
@@ -31,10 +32,25 @@ class PDIShapeDetectionShape(Enum):
     TRIANGLE = "triangle"
 
 
+class RectangleType(Enum):
+    ANY = "any"
+    SQUARE = "square"
+    HORIZONTAL = "horizontal"
+    VERTICAL = "vertical"
+    CUSTOM = "custom"
+
+
+class AspectRatio(BaseModel):
+    min_ratio: float = Field(ge=0.1, le=10.0)
+    max_ratio: float = Field(ge=0.1, le=10.0)
+
+
 class PDIShapeDetectionParameters(BaseModel):
     shape: PDIShapeDetectionShape
-    min_area: int
-    max_area: int
+    rectangle_type: RectangleType = RectangleType.ANY
+    min_area: int = 5000
+    max_area: int = 100000
+    custom_ratio: Optional[AspectRatio] = None
 
 
 class PDITemplateMatchingParameters(BaseModel):

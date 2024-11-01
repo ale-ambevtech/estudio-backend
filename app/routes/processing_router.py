@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from ..models.pdi import (
     PDIColorSegmentationParameters,
     PDIFunctionType,
+    PDIShapeDetectionParameters,
     ProcessVideoRequest,
 )
 from ..services.pdi_service import PDIService
@@ -45,6 +46,14 @@ async def process_video(request: ProcessVideoRequest):
         if pdi_function.function == PDIFunctionType.COLOR_SEGMENTATION:
             params = PDIColorSegmentationParameters(**pdi_function.parameters)
             bounding_boxes = pdi_service.process_frame_color_segmentation(
+                frame=frame, roi=request.roi, params=params, timestamp=request.timestamp
+            )
+            results.append(
+                {"function": pdi_function.function, "bounding_boxes": bounding_boxes},
+            )
+        elif pdi_function.function == PDIFunctionType.SHAPE_DETECTION:
+            params = PDIShapeDetectionParameters(**pdi_function.parameters)
+            bounding_boxes = pdi_service.process_frame_shape_detection(
                 frame=frame, roi=request.roi, params=params, timestamp=request.timestamp
             )
             results.append(

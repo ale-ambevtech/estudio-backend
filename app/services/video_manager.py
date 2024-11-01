@@ -14,13 +14,13 @@ class VideoManager:
     _current_video: VideoMetadata | None = None
     _current_video_path: Path | None = None
 
-    @classmethod
-    async def save_video(cls, file: UploadFile) -> VideoMetadata:
+    @staticmethod
+    async def save_video(file: UploadFile) -> VideoMetadata:
         """
-        Saves a new video file and removes any existing one.
+        Save an uploaded video file and return its metadata.
 
         Args:
-            file (UploadFile): The video file to be uploaded.
+            file: UploadFile object containing the video file.
 
         Returns:
             VideoMetadata: Metadata of the saved video.
@@ -33,22 +33,33 @@ class VideoManager:
             >>> import io
             >>> from fastapi import UploadFile
             >>> async def test_save():
-            ...     content = b'test video content'
-            ...     file = UploadFile(filename="test.mp4", file=io.BytesIO(content))
+
+            ...     content = b"video content"
+            ...     file = UploadFile(
+            ...         filename="test.mp4",
+            ...         file=io.BytesIO(content)
+            ...     )
             ...     try:
             ...         metadata = await VideoManager.save_video(file)
+            ...         print(metadata.filename == "test.mp4")
             ...     except HTTPException:
-            ...         # Expected since content isn't a valid video
-            ...         pass
-            >>> asyncio.run(test_save())
-        """
-        await cls.cleanup_current_video()
+            ...         print("Error saving video")
 
-        cls.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+            True
+        """
+        if not file.filename:
+            raise HTTPException(
+                status_code=400,
+                detail="No file provided",
+            )
+
+        await VideoManager.cleanup_current_video()
+
+        VideoManager.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
         extension = file.filename.split(".")[-1]
         filename = f"current_video.{extension}"
-        file_path = cls.UPLOAD_DIR / filename
+        file_path = VideoManager.UPLOAD_DIR / filename
 
         try:
             async with aiofiles.open(file_path, "wb") as out_file:
@@ -76,8 +87,8 @@ class VideoManager:
             duration = frame_count / fps
             cap.release()
 
-            cls._current_video_path = file_path
-            cls._current_video = VideoMetadata(
+            VideoManager._current_video_path = file_path
+            VideoManager._current_video = VideoMetadata(
                 id="current",
                 filename=file.filename,
                 file_size=file_path.stat().st_size,
@@ -88,7 +99,7 @@ class VideoManager:
                 uploaded_at=datetime.now(UTC),
             )
 
-            return cls._current_video
+            return VideoManager._current_video
 
         except Exception as e:
             if file_path.exists():
