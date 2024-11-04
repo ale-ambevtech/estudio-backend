@@ -67,6 +67,7 @@ pylint-flask==0.6
 pylint-plugin-utils==0.8.2
 pyparsing==3.2.0
 pytest==8.3.3
+pytest-asyncio==0.24.0
 pytest-cov==5.0.0
 python-dotenv==1.0.1
 python-multipart==0.0.16

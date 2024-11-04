@@ -11,7 +11,6 @@ from app.services.video_manager import VideoManager
 
 def create_test_video() -> bytes:
     """Creates a valid test video file in memory."""
-    # Criar um vídeo sintético
     width, height = 64, 64
     fps = 30.0
     seconds = 1
@@ -21,31 +20,30 @@ def create_test_video() -> bytes:
 
     try:
         for _ in range(int(fps * seconds)):
-            # Criar um frame com um padrão simples
             frame = np.zeros((height, width, 3), dtype=np.uint8)
             cv2.rectangle(frame, (20, 20), (40, 40), (255, 255, 255), -1)
             out.write(frame)
     finally:
         out.release()
 
-    # Ler o arquivo gerado
     with open("temp.mp4", "rb") as f:
         content = f.read()
 
-    # Limpar o arquivo temporário
     Path("temp.mp4").unlink()
-
     return content
 
 
 @pytest.mark.asyncio
 async def test_save_video(cleanup_uploads):
-    # Criar um arquivo de vídeo válido
+    """Test saving a video file."""
+    # Create test video content
     video_content = create_test_video()
     file = UploadFile(filename="test.mp4", file=io.BytesIO(video_content))
 
+    # Save the video
     metadata = await VideoManager.save_video(file)
 
+    # Verify metadata
     assert metadata is not None
     assert metadata.filename == "test.mp4"
     assert metadata.width == 64
@@ -57,12 +55,20 @@ async def test_save_video(cleanup_uploads):
 
 @pytest.mark.asyncio
 async def test_cleanup_current_video(cleanup_uploads):
-    # Criar um arquivo de vídeo válido
+    """Test cleaning up the current video."""
+    # First save a video
     video_content = create_test_video()
     file = UploadFile(filename="test.mp4", file=io.BytesIO(video_content))
-
     await VideoManager.save_video(file)
+
+    # Verify video exists
+    assert VideoManager.get_current_video() is not None
+    assert VideoManager.get_current_video_path().exists()
+
+    # Cleanup
     await VideoManager.cleanup_current_video()
 
+    # Verify cleanup
     assert VideoManager.get_current_video() is None
-    assert VideoManager.get_current_video_path() is None
+    current_path = VideoManager.get_current_video_path()
+    assert current_path is None or not current_path.exists()
