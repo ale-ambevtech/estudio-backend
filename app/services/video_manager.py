@@ -31,20 +31,30 @@ class VideoManager:
         Examples:
             >>> import asyncio
             >>> import io
+            >>> import numpy as np
+            >>> import cv2
             >>> from fastapi import UploadFile
             >>> async def test_save():
-
-            ...     content = b"video content"
-            ...     file = UploadFile(
-            ...         filename="test.mp4",
-            ...         file=io.BytesIO(content)
-            ...     )
+            ...     # Create a minimal valid video file
+            ...     width, height = 64, 64
+            ...     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            ...     out = cv2.VideoWriter("temp.mp4", fourcc, 30.0, (width, height))
+            ...     frame = np.zeros((height, width, 3), dtype=np.uint8)
+            ...     out.write(frame)
+            ...     out.release()
+            ...     # Read the video file
+            ...     with open("temp.mp4", "rb") as f:
+            ...         content = f.read()
+            ...     import os
+            ...     os.unlink("temp.mp4")  # Clean up
+            ...     # Test the upload
+            ...     file = UploadFile(filename="test.mp4", file=io.BytesIO(content))
             ...     try:
             ...         metadata = await VideoManager.save_video(file)
             ...         print(metadata.filename == "test.mp4")
-            ...     except HTTPException:
-            ...         print("Error saving video")
-
+            ...     except HTTPException as e:
+            ...         print("Error saving video:", e.detail)
+            >>> asyncio.run(test_save())
             True
         """
         if not file.filename:

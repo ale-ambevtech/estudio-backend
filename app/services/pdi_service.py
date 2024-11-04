@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
 
@@ -13,8 +14,16 @@ from ..models.pdi import (
 )
 
 
+@dataclass
+class Circle:
+    x: int
+    y: int
+    r: int
+    area: float
+
+
 class ShapeDetectionResult:
-    """Classe auxiliar para armazenar resultados intermediários da detecção."""
+    """Class to store intermediate detection results."""
 
     def __init__(self, frame: np.ndarray):
         self.debug_frame = frame.copy()
@@ -216,9 +225,8 @@ class PDIService:
         params: PDIShapeDetectionParameters,
         timestamp: int,
     ) -> list[tuple[int, int, int, int]]:
-        """Detecta círculos usando HoughCircles e valida com contornos."""
+        """Detects circles using HoughCircles and validates with contours."""
         result = ShapeDetectionResult(original_frame)
-
         contours, _ = cv2.findContours(
             binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
@@ -228,71 +236,49 @@ class PDIService:
         if circles is None:
             return []
 
-        circles_debug = original_frame.copy()
         PDIService._process_detected_circles(
             circles[0],
             contours,
             binary.shape,
             params,
-            circles_debug,
             result,
         )
 
-        PDIService._save_debug_image(6, "6_circles_detected", circles_debug, timestamp)
         PDIService._save_debug_image(
-            7, "7_final_detection", result.debug_frame, timestamp
+            6, "6_final_detection", result.debug_frame, timestamp
         )
         return result.bounding_boxes
 
     @staticmethod
-    def _find_circles(
-        blurred: np.ndarray, params: PDIShapeDetectionParameters
-    ) -> np.ndarray:
-        """Encontra círculos usando HoughCircles."""
-        return cv2.HoughCircles(
-            blurred,
-            cv2.HOUGH_GRADIENT,
-            dp=1,
-            minDist=50,
-            param1=50,
-            param2=30,
-            minRadius=int(np.sqrt(params.min_area / np.pi)),
-            maxRadius=int(np.sqrt(params.max_area / np.pi)),
-        )
-
-    @staticmethod
     def _process_detected_circles(
         circles: np.ndarray,
-        contours: list,
-        shape: tuple,
+        contours: List[np.ndarray],
+        shape: Tuple[int, int],
         params: PDIShapeDetectionParameters,
-        circles_debug: np.ndarray,
         result: ShapeDetectionResult,
     ) -> None:
-        """Processa e valida círculos detectados."""
+        """Processes and validates detected circles."""
         circles = np.uint16(np.around(circles))
-        for circle in circles:
-            x, y, r = circle
+        for circle_arr in circles:
+            x, y, r = circle_arr
             area = np.pi * r * r
+            circle = Circle(x, y, r, area)
 
-            if not PDIService._validate_circle(x, y, r, area, contours, shape, params):
+            if not PDIService._validate_circle(circle, contours, shape, params):
                 continue
 
-            PDIService._add_circle_to_result(x, y, r, area, circles_debug, result)
+            PDIService._add_circle_to_result(circle, result)
 
     @staticmethod
     def _validate_circle(
-        x: int,
-        y: int,
-        r: int,
-        area: float,
-        contours: list,
-        shape: tuple,
+        circle: Circle,
+        contours: List[np.ndarray],
+        shape: Tuple[int, int],
         params: PDIShapeDetectionParameters,
     ) -> bool:
-        """Valida um círculo detectado."""
+        """Validates a detected circle."""
         circle_mask = np.zeros(shape, dtype=np.uint8)
-        cv2.circle(circle_mask, (x, y), r, 255, -1)
+        cv2.circle(circle_mask, (circle.x, circle.y), circle.r, 255, -1)
 
         for contour in contours:
             contour_mask = np.zeros(shape, dtype=np.uint8)
@@ -301,26 +287,24 @@ class PDIService:
             overlap = cv2.bitwise_and(circle_mask, contour_mask)
             overlap_area = cv2.countNonZero(overlap)
 
-            if overlap_area > 0.7 * area and params.min_area <= area <= params.max_area:
+            if (
+                overlap_area > 0.7 * circle.area
+                and params.min_area <= circle.area <= params.max_area
+            ):
                 return True
         return False
 
     @staticmethod
     def _add_circle_to_result(
-        x: int,
-        y: int,
-        r: int,
-        area: float,
-        circles_debug: np.ndarray,
+        circle: Circle,
         result: ShapeDetectionResult,
     ) -> None:
-        """Adiciona um círculo validado ao resultado."""
-        cv2.circle(circles_debug, (x, y), r, (0, 255, 0), 2)
-        cv2.circle(result.debug_frame, (x, y), r, (0, 255, 0), 2)
+        """Adds a validated circle to the result."""
+        cv2.circle(result.debug_frame, (circle.x, circle.y), circle.r, (0, 255, 0), 2)
 
-        box_x = int(x - r)
-        box_y = int(y - r)
-        box_size = int(2 * r)
+        box_x = int(circle.x - circle.r)
+        box_y = int(circle.y - circle.r)
+        box_size = int(2 * circle.r)
         result.bounding_boxes.append((box_x, box_y, box_size, box_size))
 
         cv2.rectangle(
@@ -332,26 +316,12 @@ class PDIService:
         )
         cv2.putText(
             result.debug_frame,
-            f"area: {int(area)}",
+            f"area: {int(circle.area)}",
             (box_x, box_y - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
             (0, 255, 0),
             1,
-        )
-
-    @staticmethod
-    def _save_contours_debug(
-        binary: np.ndarray,
-        contours: list,
-        step: int,
-        timestamp: int,
-    ) -> None:
-        """Salva imagem de debug com contornos."""
-        binary_contours = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
-        cv2.drawContours(binary_contours, contours, -1, (0, 255, 0), 2)
-        PDIService._save_debug_image(
-            step, f"{step}_binary_contours", binary_contours, timestamp
         )
 
     @staticmethod
@@ -361,7 +331,7 @@ class PDIService:
         params: PDIShapeDetectionParameters,
         timestamp: int,
     ) -> list[tuple[int, int, int, int]]:
-        """Detecta triângulos usando análise de contornos."""
+        """Detects triangles using contour analysis."""
         result = ShapeDetectionResult(original_frame)
 
         contours, _ = cv2.findContours(
@@ -389,7 +359,7 @@ class PDIService:
         approx: np.ndarray,
         result: ShapeDetectionResult,
     ) -> None:
-        """Adiciona um triângulo validado ao resultado."""
+        """Adds a validated triangle to the result."""
         cv2.drawContours(result.debug_frame, [approx], -1, (0, 255, 0), 2)
 
         x, y, w, h = cv2.boundingRect(contour)
@@ -421,7 +391,7 @@ class PDIService:
         params: PDIShapeDetectionParameters,
         timestamp: int,
     ) -> list[tuple[int, int, int, int]]:
-        """Detecta retângulos usando análise de contornos e proporções."""
+        """Detects rectangles using contour analysis and aspect ratios."""
         debug_frame = original_frame.copy()
         contours_frame = original_frame.copy()
         bounding_boxes = []
@@ -434,44 +404,87 @@ class PDIService:
         PDIService._save_debug_image(4, "all_contours", contours_frame, timestamp)
 
         for contour in contours:
-            area = cv2.contourArea(contour)
-            if params.min_area <= area <= params.max_area:
-                perimeter = cv2.arcLength(contour, True)
-                approx = cv2.approxPolyDP(contour, 0.04 * perimeter, True)
-
-                if len(approx) == 4:
-                    x, y, w, h = cv2.boundingRect(contour)
-                    if h > 0:
-                        aspect_ratio = w / h
-                        min_ratio, max_ratio = PDIService._get_aspect_ratio_limits(
-                            params
-                        )
-
-                        if min_ratio <= aspect_ratio <= max_ratio:
-                            bounding_boxes.append((x, y, w, h))
-
-                            cv2.drawContours(debug_frame, [approx], -1, (0, 255, 0), 2)
-                            cv2.rectangle(
-                                debug_frame, (x, y), (x + w, y + h), (255, 0, 0), 2
-                            )
-                            cv2.putText(
-                                debug_frame,
-                                f"ratio: {aspect_ratio:.2f}",
-                                (x, y - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5,
-                                (0, 255, 0),
-                                1,
-                            )
+            PDIService._process_rectangle_contour(
+                contour,
+                params,
+                debug_frame,
+                bounding_boxes,
+            )
 
         PDIService._save_debug_image(5, "rectangles_detected", debug_frame, timestamp)
         return bounding_boxes
 
     @staticmethod
+    def _process_rectangle_contour(
+        contour: np.ndarray,
+        params: PDIShapeDetectionParameters,
+        debug_frame: np.ndarray,
+        bounding_boxes: List[Tuple[int, int, int, int]],
+    ) -> None:
+        """Processes a single contour to detect rectangles."""
+        area = cv2.contourArea(contour)
+        if params.min_area <= area <= params.max_area:
+            perimeter = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, 0.04 * perimeter, True)
+
+            if len(approx) == 4:
+                x, y, w, h = cv2.boundingRect(contour)
+                if h > 0:
+                    aspect_ratio = w / h
+                    min_ratio, max_ratio = PDIService._get_aspect_ratio_limits(params)
+
+                    if min_ratio <= aspect_ratio <= max_ratio:
+                        bounding_boxes.append((x, y, w, h))
+
+                        cv2.drawContours(debug_frame, [approx], -1, (0, 255, 0), 2)
+                        cv2.rectangle(
+                            debug_frame, (x, y), (x + w, y + h), (255, 0, 0), 2
+                        )
+                        cv2.putText(
+                            debug_frame,
+                            f"ratio: {aspect_ratio:.2f}",
+                            (x, y - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5,
+                            (0, 255, 0),
+                            1,
+                        )
+
+    @staticmethod
+    def _save_contours_debug(
+        binary: np.ndarray,
+        contours: List[np.ndarray],
+        step: int,
+        timestamp: int,
+    ) -> None:
+        """Saves a debug image with contours."""
+        binary_contours = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+        cv2.drawContours(binary_contours, contours, -1, (0, 255, 0), 2)
+        PDIService._save_debug_image(
+            step, f"{step}_binary_contours", binary_contours, timestamp
+        )
+
+    @staticmethod
+    def _find_circles(
+        blurred: np.ndarray, params: PDIShapeDetectionParameters
+    ) -> np.ndarray:
+        """Finds circles using HoughCircles."""
+        return cv2.HoughCircles(
+            blurred,
+            cv2.HOUGH_GRADIENT,
+            dp=1,
+            minDist=50,
+            param1=50,
+            param2=30,
+            minRadius=int(np.sqrt(params.min_area / np.pi)),
+            maxRadius=int(np.sqrt(params.max_area / np.pi)),
+        )
+
+    @staticmethod
     def _get_aspect_ratio_limits(
         params: PDIShapeDetectionParameters,
-    ) -> tuple[float, float]:
-        """Retorna os limites de proporção baseado no tipo de retângulo."""
+    ) -> Tuple[float, float]:
+        """Returns aspect ratio limits based on rectangle type."""
         if params.rectangle_type == RectangleType.CUSTOM and params.custom_ratio:
             return params.custom_ratio.min_ratio, params.custom_ratio.max_ratio
 
