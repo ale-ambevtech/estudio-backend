@@ -25,3 +25,10 @@ class ROI(BaseModel):
 class Line(BaseModel):
     start: Point
     end: Point
+
+
+class Circle(BaseModel):
+    x: int
+    y: int
+    r: int
+    area: float

@@ -1,25 +1,16 @@
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
 
 import cv2
 import numpy as np
 
-from ..models.geometry import ROI
+from ..models.geometry import ROI, Circle
 from ..models.pdi import (
     PDIColorSegmentationParameters,
     PDIShapeDetectionParameters,
     PDIShapeDetectionShape,
     RectangleType,
 )
-
-
-@dataclass
-class Circle:
-    x: int
-    y: int
-    r: int
-    area: float
 
 
 class ShapeDetectionResult:
@@ -262,7 +253,7 @@ class PDIService:
         for circle_arr in circles:
             x, y, r = circle_arr
             area = np.pi * r * r
-            circle = Circle(x, y, r, area)
+            circle = Circle(x=x, y=y, r=r, area=area)
 
             if not PDIService._validate_circle(circle, contours, shape, params):
                 continue
