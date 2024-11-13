@@ -80,3 +80,26 @@ def test_process_video_invalid_timestamp(
     assert response.status_code == 422
     errors = response.json()
     assert isinstance(errors.get("detail"), list)
+
+
+def test_process_video_debug_success(
+    client, sample_roi, sample_pdi_request, sample_video_path
+):
+    """Test successful video processing with debug visualization"""
+    # Upload video first
+    with open(sample_video_path, "rb") as f:
+        upload_response = client.post(
+            "/api/v1/video", files={"file": ("test.mp4", f, "video/mp4")}
+        )
+    assert upload_response.status_code == 200
+
+    # Process video with debug
+    request_data = {**sample_pdi_request, "roi": sample_roi.model_dump()}
+    response = client.post("/api/v1/process/debug", json=request_data)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+    assert "X-Results" in response.headers
+
+    # Verify image content
+    assert len(response.content) > 0

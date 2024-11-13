@@ -9,9 +9,8 @@ from fastapi import UploadFile
 from app.services.video_manager import VideoManager
 
 
-def create_test_video() -> bytes:
-    """Creates a valid test video file in memory."""
-    width, height = 64, 64
+def create_test_video(width: int = 64, height: int = 64) -> bytes:
+    """Creates a valid test video file in memory with specified dimensions."""
     fps = 30.0
     seconds = 1
 
@@ -21,7 +20,13 @@ def create_test_video() -> bytes:
     try:
         for _ in range(int(fps * seconds)):
             frame = np.zeros((height, width, 3), dtype=np.uint8)
-            cv2.rectangle(frame, (20, 20), (40, 40), (255, 255, 255), -1)
+            cv2.rectangle(
+                frame,
+                (width // 3, height // 3),
+                (2 * width // 3, 2 * height // 3),
+                (255, 255, 255),
+                -1,
+            )
             out.write(frame)
     finally:
         out.release()
@@ -37,7 +42,7 @@ def create_test_video() -> bytes:
 async def test_save_video(cleanup_uploads):
     """Test saving a video file."""
     # Create test video content
-    video_content = create_test_video()
+    video_content = create_test_video(64, 64)
     file = UploadFile(filename="test.mp4", file=io.BytesIO(video_content))
 
     # Save the video
@@ -57,7 +62,7 @@ async def test_save_video(cleanup_uploads):
 async def test_cleanup_current_video(cleanup_uploads):
     """Test cleaning up the current video."""
     # First save a video
-    video_content = create_test_video()
+    video_content = create_test_video(64, 64)
     file = UploadFile(filename="test.mp4", file=io.BytesIO(video_content))
     await VideoManager.save_video(file)
 
@@ -72,3 +77,24 @@ async def test_cleanup_current_video(cleanup_uploads):
     assert VideoManager.get_current_video() is None
     current_path = VideoManager.get_current_video_path()
     assert current_path is None or not current_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_save_video_with_resize(cleanup_uploads):
+    """Test saving and auto-resizing a large video file."""
+    # Create a test video with dimensions larger than max
+    width, height = 1280, 720  # Larger than max dimensions
+    video_content = create_test_video(width, height)
+    file = UploadFile(filename="test.mp4", file=io.BytesIO(video_content))
+
+    # Save the video
+    metadata = await VideoManager.save_video(file)
+
+    # Verify metadata and resizing
+    assert metadata is not None
+    assert metadata.width <= VideoManager.MAX_WIDTH
+    assert metadata.height <= VideoManager.MAX_HEIGHT
+    # Verify aspect ratio is maintained
+    original_ratio = 1280 / 720
+    new_ratio = metadata.width / metadata.height
+    assert abs(original_ratio - new_ratio) < 0.01

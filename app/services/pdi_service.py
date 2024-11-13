@@ -10,6 +10,7 @@ from ..models.pdi import (
     PDIShapeDetectionParameters,
     PDIShapeDetectionShape,
     RectangleType,
+    PDIFunctionType,
 )
 
 
@@ -486,3 +487,62 @@ class PDIService:
             RectangleType.VERTICAL: (0.2, 0.67),
         }
         return limits[params.rectangle_type]
+
+    @staticmethod
+    def draw_debug_boxes(
+        frame: np.ndarray,
+        results: list[dict],
+        roi: ROI,
+    ) -> np.ndarray:
+        """
+        Draws bounding boxes on the frame for debugging purposes.
+
+        Args:
+            frame: Original frame
+            results: List of processing results with bounding boxes
+            roi: Region of interest
+
+        Returns:
+            np.ndarray: Frame with drawn bounding boxes
+        """
+        debug_frame = frame.copy()
+
+        # Draw ROI
+        cv2.rectangle(
+            debug_frame,
+            (roi.position.x, roi.position.y),
+            (roi.position.x + roi.size.width, roi.position.y + roi.size.height),
+            (255, 255, 0),  # Yellow
+            2,
+        )
+
+        colors = {
+            "color_segmentation": (0, 255, 0),  # Green
+            "shape_detection": (255, 0, 0),  # Blue
+        }
+
+        for result in results:
+            color = colors.get(result["function"], (0, 0, 255))  # Default red
+
+            for box in result["bounding_boxes"]:
+                x, y, w, h = box
+                abs_x = roi.position.x + x
+                abs_y = roi.position.y + y
+
+                # Draw bounding box
+                cv2.rectangle(
+                    debug_frame, (abs_x, abs_y), (abs_x + w, abs_y + h), color, 2
+                )
+
+                # Add function type label
+                cv2.putText(
+                    debug_frame,
+                    str(result["function"]),
+                    (abs_x, abs_y - 5),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    color,
+                    1,
+                )
+
+        return debug_frame

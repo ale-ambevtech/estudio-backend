@@ -11,6 +11,8 @@ from ..models.video import VideoMetadata
 
 class VideoManager:
     UPLOAD_DIR = Path("uploads/videos")
+    MAX_WIDTH = 640
+    MAX_HEIGHT = 360
     _current_video: VideoMetadata | None = None
     _current_video_path: Path | None = None
 
@@ -64,29 +66,31 @@ class VideoManager:
             )
 
         await VideoManager.cleanup_current_video()
-
         VideoManager.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+        # Save original file temporarily
         extension = file.filename.split(".")[-1]
-        filename = f"current_video.{extension}"
-        file_path = VideoManager.UPLOAD_DIR / filename
+        temp_filename = f"temp_video.{extension}"
+        temp_path = VideoManager.UPLOAD_DIR / temp_filename
 
         try:
-            async with aiofiles.open(file_path, "wb") as out_file:
+            async with aiofiles.open(temp_path, "wb") as out_file:
                 content = await file.read()
                 await out_file.write(content)
 
-            cap = cv2.VideoCapture(str(file_path))
+            # Verify video is valid
+            cap = cv2.VideoCapture(str(temp_path))
             if not cap.isOpened():
                 raise HTTPException(
                     status_code=400,
                     detail="Invalid video file or unsupported format",
                 )
 
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            original_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            original_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS)
             frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            cap.release()
 
             if fps <= 0 or frame_count <= 0:
                 raise HTTPException(
@@ -94,14 +98,26 @@ class VideoManager:
                     detail="Invalid video file: could not determine video properties",
                 )
 
-            duration = frame_count / fps
-            cap.release()
+            # Resize video if needed
+            final_filename = f"current_video.{extension}"
+            final_path = VideoManager.UPLOAD_DIR / final_filename
 
-            VideoManager._current_video_path = file_path
+            if (
+                original_width > VideoManager.MAX_WIDTH
+                or original_height > VideoManager.MAX_HEIGHT
+            ):
+                width, height = VideoManager._resize_video(temp_path, final_path)
+            else:
+                # If no resize needed, just rename the temp file
+                temp_path.rename(final_path)
+                width, height = original_width, original_height
+
+            duration = frame_count / fps
+            VideoManager._current_video_path = final_path
             VideoManager._current_video = VideoMetadata(
                 id="current",
                 filename=file.filename,
-                file_size=file_path.stat().st_size,
+                file_size=final_path.stat().st_size,
                 duration=duration,
                 width=width,
                 height=height,
@@ -112,14 +128,17 @@ class VideoManager:
             return VideoManager._current_video
 
         except Exception as e:
-            if file_path.exists():
-                os.remove(file_path)
+            if temp_path.exists():
+                os.remove(temp_path)
             if isinstance(e, HTTPException):
                 raise
             raise HTTPException(
                 status_code=500,
                 detail=f"Error processing video: {str(e)}",
             ) from e
+        finally:
+            if temp_path.exists():
+                os.remove(temp_path)
 
     @classmethod
     async def cleanup_current_video(cls) -> None:
@@ -166,3 +185,36 @@ class VideoManager:
             >>> assert path is None or isinstance(path, Path)
         """
         return cls._current_video_path
+
+    @staticmethod
+    def _resize_video(input_path: Path, output_path: Path) -> tuple[int, int]:
+        """
+        Resizes video maintaining aspect ratio within MAX dimensions.
+        Returns the new width and height.
+        """
+        cap = cv2.VideoCapture(str(input_path))
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+
+        # Calculate new dimensions maintaining aspect ratio
+        ratio = min(VideoManager.MAX_WIDTH / width, VideoManager.MAX_HEIGHT / height)
+        new_width = int(width * ratio)
+        new_height = int(height * ratio)
+
+        # Create video writer with new dimensions
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(str(output_path), fourcc, fps, (new_width, new_height))
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            resized_frame = cv2.resize(frame, (new_width, new_height))
+            out.write(resized_frame)
+
+        cap.release()
+        out.release()
+
+        return new_width, new_height
