@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.openapi import add_custom_openapi_schema
-from app.routes import processing_router, video_router
+from app.routes import processing_router, video_router, websocket_router
 
 app = FastAPI()
 
@@ -22,6 +22,7 @@ app.add_middleware(
 
 app.include_router(video_router.router, prefix="/api/v1")
 app.include_router(processing_router.router, prefix="/api/v1")
+app.include_router(websocket_router.router, prefix="/api/v1")
 
 
 @app.get(
