@@ -68,7 +68,6 @@ class VideoManager:
         await VideoManager.cleanup_current_video()
         VideoManager.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-        # Group file-related variables
         file_info = {
             "extension": file.filename.split(".")[-1],
             "temp_filename": f"temp_video.{file.filename.split('.')[-1]}",
@@ -80,7 +79,6 @@ class VideoManager:
                 content = await file.read()
                 await out_file.write(content)
 
-            # Get video properties in one go
             cap = cv2.VideoCapture(str(temp_path))
             if not cap.isOpened():
                 raise HTTPException(
@@ -105,7 +103,6 @@ class VideoManager:
             final_filename = f"current_video.{file_info['extension']}"
             final_path = VideoManager.UPLOAD_DIR / final_filename
 
-            # Resize if needed and get final dimensions
             if (
                 video_props["width"] > VideoManager.MAX_WIDTH
                 or video_props["height"] > VideoManager.MAX_HEIGHT
@@ -199,12 +196,10 @@ class VideoManager:
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = cap.get(cv2.CAP_PROP_FPS)
 
-        # Calculate new dimensions maintaining aspect ratio
         ratio = min(VideoManager.MAX_WIDTH / width, VideoManager.MAX_HEIGHT / height)
         new_width = int(width * ratio)
         new_height = int(height * ratio)
 
-        # Create video writer with new dimensions
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(str(output_path), fourcc, fps, (new_width, new_height))
 

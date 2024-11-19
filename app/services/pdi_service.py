@@ -506,34 +506,31 @@ class PDIService:
         """
         debug_frame = frame.copy()
 
-        # Draw ROI
         cv2.rectangle(
             debug_frame,
             (roi.position.x, roi.position.y),
             (roi.position.x + roi.size.width, roi.position.y + roi.size.height),
-            (255, 255, 0),  # Yellow
+            (255, 255, 0),
             2,
         )
 
         colors = {
-            "color_segmentation": (0, 255, 0),  # Green
-            "shape_detection": (255, 0, 0),  # Blue
+            "color_segmentation": (0, 255, 0),
+            "shape_detection": (255, 0, 0),
         }
 
         for result in results:
-            color = colors.get(result["function"], (0, 0, 255))  # Default red
+            color = colors.get(result["function"], (0, 0, 255))
 
             for box in result["bounding_boxes"]:
                 x, y, w, h = box
                 abs_x = roi.position.x + x
                 abs_y = roi.position.y + y
 
-                # Draw bounding box
                 cv2.rectangle(
                     debug_frame, (abs_x, abs_y), (abs_x + w, abs_y + h), color, 2
                 )
 
-                # Add function type label
                 cv2.putText(
                     debug_frame,
                     str(result["function"]),
