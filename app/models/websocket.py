@@ -1,34 +1,44 @@
-from typing import Dict, List, Optional
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_serializer
 
-
-class FrameMarking(BaseModel):
-    x: int
-    y: int
-    width: int
-    height: int
-
-
-class FrameInfo(BaseModel):
-    markings: List[FrameMarking]
-    functions: List[str]
-    parameters: Optional[Dict[str, str]] = None
+from ..models.geometry import ROI
+from ..models.pdi import PDIFunction
 
 
 class WebSocketMessage(BaseModel):
     timestamp: int
-    frame_info: Optional[FrameInfo] = None
+    roi: ROI
+    pdi_functions: List[PDIFunction]
 
 
 class WebSocketResponseData(BaseModel):
     timestamp: int
     video_id: str
-    frame_info: Optional[FrameInfo] = None
-    processing_results: Optional[List[Dict[str, str]]] = None
+    results: List[Dict[str, Any]]
+
+    @model_serializer
+    def serialize_model(self) -> Dict[str, Any]:
+        return {
+            "timestamp": self.timestamp,
+            "video_id": self.video_id,
+            "results": [
+                {k: str(v) if isinstance(v, Enum) else v for k, v in result.items()}
+                for result in self.results
+            ],
+        }
 
 
 class WebSocketResponse(BaseModel):
     type: str  # 'metadata_sync' | 'error'
     data: Optional[WebSocketResponseData] = None
     message: Optional[str] = None
+
+    @model_serializer
+    def serialize_model(self) -> Dict[str, Any]:
+        return {
+            "type": self.type,
+            "data": self.data.model_dump() if self.data else None,
+            "message": self.message,
+        }

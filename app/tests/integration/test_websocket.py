@@ -1,61 +1,62 @@
+import asyncio
+
 import pytest
 from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocket
 
 
-def test_websocket_connection(client):
-    with client.websocket_connect("/api/v1/ws/metadata") as websocket:
-        # Envie uma mensagem simples para testar a conexão
-        websocket.send_json({"timestamp": 1000})
-        response = websocket.receive_json()
+@pytest.fixture
+def sample_ws_message():
+    return {
+        "timestamp": 500,
+        "roi": {"position": {"x": 0, "y": 0}, "size": {"width": 100, "height": 100}},
+        "pdi_functions": [
+            {
+                "function": "color_segmentation",
+                "parameters": {
+                    "lower_color": {"r": 255, "g": 0, "b": 0},
+                    "upper_color": {"r": 255, "g": 0, "b": 0},
+                    "min_area": 100,
+                    "max_area": 2000,
+                },
+                "output_type": "bounding_box",
+            }
+        ],
+    }
 
-        # Verifica se recebemos uma resposta (mesmo que seja de erro)
-        assert response is not None
-        assert "type" in response
 
-
-def test_websocket_invalid_message(client):
-    with client.websocket_connect("/api/v1/ws/metadata") as websocket:
-        # Send invalid message
-        websocket.send_json({"invalid": "message"})
-        response = websocket.receive_json()
-
-        assert response["type"] == "error"
-        assert "Invalid message format" in response["message"]
-
-
-def test_websocket_no_video(client):
-    with client.websocket_connect("/api/v1/ws/metadata") as websocket:
-        # Send message without loading video
-        websocket.send_json({"timestamp": 1000})
-        response = websocket.receive_json()
+@pytest.mark.asyncio
+async def test_websocket_no_video(client: TestClient, sample_ws_message):
+    websocket = client.websocket_connect("/api/v1/ws/metadata")
+    with websocket as ws:
+        ws.send_json(sample_ws_message)
+        response = ws.receive_json()
 
         assert response["type"] == "error"
         assert "No video loaded" in response["message"]
 
 
 @pytest.mark.asyncio
-async def test_websocket_valid_sync(client, sample_video_path):
-    # First upload a video
+async def test_websocket_valid_processing(
+    client: TestClient, sample_ws_message, sample_video_path
+):
+    """
+    Test WebSocket processing with a valid video frame
+    """
+    # Upload video first
     with open(sample_video_path, "rb") as f:
         response = client.post(
             "/api/v1/video", files={"file": ("test.mp4", f, "video/mp4")}
         )
     assert response.status_code == 200
 
-    # Then test WebSocket sync
-    with client.websocket_connect("/api/v1/ws/metadata") as websocket:
-        message = {
-            "timestamp": 1000,
-            "frame_info": {
-                "markings": [{"x": 0, "y": 0, "width": 100, "height": 100}],
-                "functions": ["detection"],
-            },
-        }
-        websocket.send_json(message)
-        response = websocket.receive_json()
+    # Test WebSocket processing
+    websocket = client.websocket_connect("/api/v1/ws/metadata")
+    with websocket as ws:
+        ws.send_json(sample_ws_message)
+        response = ws.receive_json()
 
         assert response["type"] == "metadata_sync"
-        assert response["data"]["timestamp"] == 1000
+        assert response["data"]["timestamp"] == sample_ws_message["timestamp"]
         assert "video_id" in response["data"]
-        assert "frame_info" in response["data"]
+        assert "results" in response["data"]

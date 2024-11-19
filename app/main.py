@@ -19,10 +19,11 @@ app.add_middleware(
     max_age=3600,
 )
 
+API_PREFIX = "/api/v1"
 
-app.include_router(video_router.router, prefix="/api/v1")
-app.include_router(processing_router.router, prefix="/api/v1")
-app.include_router(websocket_router.router, prefix="/api/v1")
+app.include_router(video_router.router, prefix=API_PREFIX)
+app.include_router(processing_router.router, prefix=API_PREFIX)
+app.include_router(websocket_router.router, prefix=API_PREFIX)
 
 
 @app.get(
