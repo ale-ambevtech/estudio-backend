@@ -68,17 +68,19 @@ class VideoManager:
         await VideoManager.cleanup_current_video()
         VideoManager.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-        # Save original file temporarily
-        extension = file.filename.split(".")[-1]
-        temp_filename = f"temp_video.{extension}"
-        temp_path = VideoManager.UPLOAD_DIR / temp_filename
+        # Group file-related variables
+        file_info = {
+            "extension": file.filename.split(".")[-1],
+            "temp_filename": f"temp_video.{file.filename.split('.')[-1]}",
+        }
+        temp_path = VideoManager.UPLOAD_DIR / file_info["temp_filename"]
 
         try:
             async with aiofiles.open(temp_path, "wb") as out_file:
                 content = await file.read()
                 await out_file.write(content)
 
-            # Verify video is valid
+            # Get video properties in one go
             cap = cv2.VideoCapture(str(temp_path))
             if not cap.isOpened():
                 raise HTTPException(
@@ -86,42 +88,42 @@ class VideoManager:
                     detail="Invalid video file or unsupported format",
                 )
 
-            original_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            original_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            video_props = {
+                "width": int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                "height": int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+                "fps": cap.get(cv2.CAP_PROP_FPS),
+                "frame_count": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
+            }
             cap.release()
 
-            if fps <= 0 or frame_count <= 0:
+            if video_props["fps"] <= 0 or video_props["frame_count"] <= 0:
                 raise HTTPException(
                     status_code=400,
                     detail="Invalid video file: could not determine video properties",
                 )
 
-            # Resize video if needed
-            final_filename = f"current_video.{extension}"
+            final_filename = f"current_video.{file_info['extension']}"
             final_path = VideoManager.UPLOAD_DIR / final_filename
 
+            # Resize if needed and get final dimensions
             if (
-                original_width > VideoManager.MAX_WIDTH
-                or original_height > VideoManager.MAX_HEIGHT
+                video_props["width"] > VideoManager.MAX_WIDTH
+                or video_props["height"] > VideoManager.MAX_HEIGHT
             ):
-                width, height = VideoManager._resize_video(temp_path, final_path)
+                final_dimensions = VideoManager._resize_video(temp_path, final_path)
             else:
-                # If no resize needed, just rename the temp file
                 temp_path.rename(final_path)
-                width, height = original_width, original_height
+                final_dimensions = (video_props["width"], video_props["height"])
 
-            duration = frame_count / fps
             VideoManager._current_video_path = final_path
             VideoManager._current_video = VideoMetadata(
                 id="current",
                 filename=file.filename,
                 file_size=final_path.stat().st_size,
-                duration=duration,
-                width=width,
-                height=height,
-                fps=fps,
+                duration=video_props["frame_count"] / video_props["fps"],
+                width=final_dimensions[0],
+                height=final_dimensions[1],
+                fps=video_props["fps"],
                 uploaded_at=datetime.now(UTC),
             )
 

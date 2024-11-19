@@ -10,7 +10,6 @@ from ..models.pdi import (
     PDIShapeDetectionParameters,
     PDIShapeDetectionShape,
     RectangleType,
-    PDIFunctionType,
 )
 
 

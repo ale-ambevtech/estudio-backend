@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from app.core.openapi import add_custom_openapi_schema
 from app.routes import processing_router, video_router, websocket_router

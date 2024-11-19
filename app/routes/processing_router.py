@@ -1,8 +1,5 @@
 import cv2
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
-import numpy as np
-import json
 
 from ..models.pdi import (
     PDIColorSegmentationParameters,
@@ -117,7 +114,7 @@ async def process_video_debug(request: ProcessVideoRequest):
         return {"results": results}
 
     except Exception as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     finally:
         if "cap" in locals():
             cap.release()
