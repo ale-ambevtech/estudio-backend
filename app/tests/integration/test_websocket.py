@@ -8,6 +8,7 @@ from fastapi.websockets import WebSocket
 @pytest.fixture
 def sample_ws_message():
     return {
+        "marker_id": "test-marker-1",
         "timestamp": 500,
         "roi": {"position": {"x": 0, "y": 0}, "size": {"width": 100, "height": 100}},
         "pdi_functions": [

@@ -8,12 +8,14 @@ from ..models.pdi import PDIFunction
 
 
 class WebSocketMessage(BaseModel):
+    marker_id: str
     timestamp: int
     roi: ROI
     pdi_functions: List[PDIFunction]
 
 
 class WebSocketResponseData(BaseModel):
+    marker_id: str
     timestamp: int
     video_id: str
     results: List[Dict[str, Any]]
@@ -21,6 +23,7 @@ class WebSocketResponseData(BaseModel):
     @model_serializer
     def serialize_model(self) -> Dict[str, Any]:
         return {
+            "marker_id": self.marker_id,
             "timestamp": self.timestamp,
             "video_id": self.video_id,
             "results": [

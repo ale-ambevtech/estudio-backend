@@ -45,13 +45,13 @@ async def websocket_metadata(websocket: WebSocket):
                 response = WebSocketResponse(
                     type="metadata_sync",
                     data=WebSocketResponseData(
+                        marker_id=message.marker_id,
                         timestamp=message.timestamp,
                         video_id=current_video.id,
                         results=results,
                     ),
                 )
 
-                # Usar mode='json' para garantir serialização adequada
                 await manager.broadcast_metadata(response.model_dump(mode="json"))
 
             except asyncio.TimeoutError:
