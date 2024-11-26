@@ -1,6 +1,8 @@
-# Estúdio Backend
+<img src="./readme/cardboard-unfolded.svg" alt="Estúdio de Papelão" style="width: 200px" />
 
-O **Estúdio Backend** é uma aplicação desenvolvida para criar e testar projetos de visão computacional utilizando recursos avançados do OpenCV. O sistema é parte integrante da plataforma Soda Vision, fornecendo recursos de Processamento Digital de Imagens (PDI) e desenvolvimento de modelos personalizados.
+# Estúdio (de papelão) Backend
+
+O **Estúdio de Papelão** é uma aplicação desenvolvida para criar e testar projetos de visão computacional utilizando recursos avançados do OpenCV. O sistema é parte integrante da plataforma Soda Vision, fornecendo recursos de Processamento Digital de Imagens (PDI) e desenvolvimento de modelos personalizados. O nome "de papelão" reflete sua natureza como protótipo rápido e experimental, focado em validação de conceitos.
 
 ## Integração com Soda Vision
 
@@ -37,7 +39,7 @@ O **Estúdio** é a interface web onde os usuários podem desenvolver e testar s
 
 - **Upload de Vídeo**: O usuário faz upload de um vídeo para teste, que é armazenado localmente no frontend e replicado no backend.
 - **Interface Visual**: Permite marcar áreas de interesse (ROIs) no vídeo através de retângulos.
-- **Configuração de Funções**: Para cada ROI, é possível atribuir funções como:
+- **Configuração de Funções**: Para cada marcação de ROI, é possível atribuir funções como:
   - Segmentação de Cores
   - Detecção de Pessoas
   - Template Matching
@@ -92,14 +94,11 @@ O **MetaSync** sincroniza os metadados entre frontend e backend, garantindo que 
 
 ### Estúdio
 
-1. Clone o repositório da Soda Vision
+1. Clone o repositório
 2. Instale as dependências do frontend e backend
 3. Configure as variáveis de ambiente
 4. Inicie o servidor de desenvolvimento
 5. Acesse o módulo do Estúdio na plataforma
-6. Crie um novo projeto (PDI ou Modelo Personalizado)
-7. Desenvolva e teste sua solução
-8. Exporte para o Runner quando finalizado
 
 ### Runner
 
@@ -108,15 +107,28 @@ O **MetaSync** sincroniza os metadados entre frontend e backend, garantindo que 
 3. Configure as fontes de vídeo (câmeras)
 4. Inicie o processamento
 
-## Futuras Implementações
+## Funções OpenCV Suportadas
 
-- **Novas Funções PDI**: Expansão da biblioteca de funções
-- **Tipos de Modelos**: Suporte a diferentes arquiteturas e casos de uso
-- **Interface do Estúdio**: Novas ferramentas de desenvolvimento
-- **Gerenciamento Remoto**: Configuração e monitoramento remoto dos Runners
-- **Escalabilidade**: Suporte a múltiplos dispositivos e cargas de trabalho
-- **Integração**: Novas funcionalidades na plataforma Soda Vision
+### 1. Segmentação de Cor
 
----
+- Definição de cores inferior e superior
+- Ajuste de tolerância
+- Configuração de área mínima/máxima
 
-**Nota**: Este projeto utiliza a arquitetura **FrameMirror** com **MetaSync** para desenvolvimento eficiente de soluções de visão computacional, integrado à plataforma Soda Vision para uma experiência completa de desenvolvimento.
+### 2. Detecção de Formas
+
+- Seleção múltipla de formas (círculo, retângulo, triângulo)
+- Ajuste de tolerância de forma
+- Processamento em tempo real
+
+### 3. Template Matching
+
+- Upload de imagem de referência
+- Configuração de limiar de correspondência
+- Detecção em múltiplas escalas
+
+### 4. Detecção de Pessoas
+
+- Detecção automática de pessoas
+- Configuração de parâmetros de detecção
+- Marcação em tempo real
