@@ -1,13 +1,14 @@
+import os
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 from app.core.openapi import add_custom_openapi_schema
 from app.routes import processing_router, video_router, websocket_router
+
+load_dotenv()
 
 app = FastAPI()
 

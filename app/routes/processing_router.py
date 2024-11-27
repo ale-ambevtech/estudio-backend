@@ -1,8 +1,8 @@
+from pathlib import Path
 from typing import List
 
 import cv2
 from fastapi import APIRouter, HTTPException
-from pathlib import Path
 
 from ..models.geometry import ROI
 from ..models.pdi import (
