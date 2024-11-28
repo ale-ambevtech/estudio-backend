@@ -15,7 +15,7 @@ services:
       - DEBUG_DIR=/app/debug
       - MAX_FILE_SIZE=104857600
       - CHUNK_SIZE=1048576
-      - CORS_ORIGINS=http://localhost:5173
+      - CORS_ORIGINS=http://localhost:3000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
       interval: 30s
@@ -42,7 +42,7 @@ services:
       - DEBUG_DIR=/app/debug
       - MAX_FILE_SIZE=104857600
       - CHUNK_SIZE=1048576
-      - CORS_ORIGINS=http://localhost:5173
+      - CORS_ORIGINS=http://localhost:3000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
       interval: 30s
