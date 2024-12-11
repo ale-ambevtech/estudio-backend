@@ -1,7 +1,7 @@
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-
+import uuid
 import aiofiles
 import cv2
 from fastapi import HTTPException, UploadFile
@@ -114,7 +114,7 @@ class VideoManager:
 
             VideoManager._current_video_path = final_path
             VideoManager._current_video = VideoMetadata(
-                id="current",
+                id=str(uuid.uuid4()),
                 filename=file.filename,
                 file_size=final_path.stat().st_size,
                 duration=video_props["frame_count"] / video_props["fps"],
