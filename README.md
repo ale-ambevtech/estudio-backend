@@ -132,3 +132,17 @@ O **MetaSync** sincroniza os metadados entre frontend e backend, garantindo que 
 - Detecção automática de pessoas
 - Configuração de parâmetros de detecção
 - Marcação em tempo real
+
+# Docker ARM64/v8
+
+## Build
+
+```bash
+docker build -f Dockerfile.armv8 -t estudio-backend:arm64v8 .;
+```
+
+## Run
+
+```bash
+docker run -d --name estudio-backend -p 8123:8123 -v $(pwd)/uploads:/app/uploads -v $(pwd)/debug:app/debug --restart unless-stopped estudio-backend:arm64v8
+```

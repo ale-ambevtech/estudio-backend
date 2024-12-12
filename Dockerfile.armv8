@@ -1,8 +1,8 @@
-FROM python:3.11-slim AS base
+FROM arm64v8/python:3.11-slim
 
 WORKDIR /app
 
-# Define default values without referencing undefined variables
+# Define environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \
@@ -11,18 +11,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MAX_FILE_SIZE=104857600 \
     CHUNK_SIZE=1048576 \
     PORT=8123 \
+    CORS_ORIGINS=* \
     PATH="/home/appuser/.local/bin:$PATH"
 
-# Install system dependencies
+# Instalar dependências necessárias para o OpenCV
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    python3-dev \
-    linux-headers-generic \
-    build-essential \
-    libpq-dev \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir --upgrade pip
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN useradd --create-home appuser \
@@ -37,13 +37,15 @@ COPY --chown=appuser:appuser ./app ./app
 # Switch to non-root user
 USER appuser
 
-# Install Python dependencies ensuring binaries are in PATH
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Instalar todas as dependências exceto OpenCV
+RUN pip install --no-cache-dir --user $(grep -v "opencv" requirements.txt)
+
+# Instalar OpenCV específico para ARM
+RUN pip install --no-cache-dir --user opencv-python-headless
 
 # Create required directories with proper permissions
 RUN mkdir -p ${UPLOAD_DIR} ${DEBUG_DIR}
 
 EXPOSE ${PORT}
 
-# Use uvicorn directly
 CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
